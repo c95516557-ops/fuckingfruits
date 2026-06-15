@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0,
+                 maximum-scale=1.0, user-scalable=no,
+                 viewport-fit=cover" />
+  <title>Suika Merge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap"
+        rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ═══════════════════════════════════════════════
+       BODY
+       Feature 4: background-image supports optional assets/background.png.
+       If the image is absent the browser silently skips it and shows the
+       radial-gradient fallback — no JS needed.
+    ═══════════════════════════════════════════════ */
+    body {
+      background-color: #d4eaf7;
+      background-image:
+        url('assets/background.png'),
+        radial-gradient(ellipse at 50% -10%, #b8dcf5 0%, #d4eaf7 70%);
+      background-size: cover, auto;
+      background-position: center, center;
+      background-repeat: no-repeat, no-repeat;
+      min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Fredoka', system-ui, sans-serif;
+      overflow: hidden; user-select: none; -webkit-user-select: none;
+    }
+
+    #app {
+      position: relative;
+      width: min(95vw, 450px);
+      height: min(95dvh, 820px);
+      border-radius: 22px; overflow: hidden;
+      filter: drop-shadow(0 16px 32px rgba(100,150,200,0.35));
+    }
+
+    .screen {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .screen.active { opacity: 1; pointer-events: all; }
+
+    /* ── SHARED BUTTONS ── */
+    .btn {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(16px, 4vw, 20px);
+      font-weight: 700; letter-spacing: 0.6px;
+      border: none; border-radius: 100px;
+      padding: 12px 32px;
+      width: 85%; max-width: 280px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
+    .btn:active { transform: translateY(3px) !important; }
+    .btn-primary  { color:#5c3400; background:linear-gradient(145deg,#ffd166,#ff8c42); box-shadow:0 5px 0 #c45d00,0 8px 20px rgba(255,140,66,.35); }
+    .btn-primary:hover  { transform:translateY(-2px); box-shadow:0 8px 0 #c45d00,0 14px 28px rgba(255,140,66,.45); }
+    .btn-secondary{ color:#3a4a8a; background:#dce8ff; box-shadow:0 4px 0 #a8bcee,0 6px 16px rgba(100,140,220,.22); }
+    .btn-secondary:hover{ transform:translateY(-2px); filter:brightness(1.06); box-shadow:0 6px 0 #a8bcee,0 10px 20px rgba(100,140,220,.28); }
+    .btn-danger   { color:#fff; background:linear-gradient(145deg,#ff7070,#e83c3c); box-shadow:0 4px 0 #b52020,0 6px 16px rgba(232,60,60,.35); }
+    .btn-danger:hover   { transform:translateY(-2px); box-shadow:0 7px 0 #b52020,0 12px 24px rgba(232,60,60,.45); }
+    .btn-ghost    { color:#6a7baa; background:transparent; box-shadow:none; font-size:13px; font-weight:500; padding:7px 16px; width:auto; text-decoration:underline; text-underline-offset:3px; }
+    .btn-ghost:hover { color:#3a4a8a; }
+
+    .ui-icon {
+      width: 1.2em; height: 1.2em;
+      vertical-align: middle; display: inline-block;
+      object-fit: contain; transform: translateY(-2px);
+    }
+
+    /* ── MAIN MENU ── */
+    #main-menu { background:linear-gradient(160deg,#fff8ee,#ffefd4); gap:0; }
+    .menu-settings-btn { position:absolute; top:14px; right:14px; font-size:24px; background:none; border:none; cursor:pointer; line-height:1; opacity:.55; transition:opacity .15s,transform .25s; }
+    .menu-settings-btn:hover { opacity:1; transform:rotate(45deg); }
+    .menu-hs-badge { position:absolute; top:14px; left:14px; font-size:12px; font-weight:600; color:#6a7baa; background:rgba(255,255,255,.75); border:1px solid #c5d8f0; border-radius:8px; padding:4px 8px; line-height:1.4; text-align:center; }
+    .menu-hs-badge span { color:#e07c00; display:block; font-size:14px; }
+    .menu-deco { font-size:clamp(48px,12vw,64px); line-height:1; margin-bottom:6px; animation:float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+    .menu-title { font-size:clamp(28px,8vw,38px); font-weight:700; color:#e07c00; text-shadow:0 2px 12px rgba(224,124,0,.3); letter-spacing:1px; margin-bottom:3px; }
+    .menu-sub   { font-size:13px; color:#7a8bb5; margin-bottom:28px; }
+    .menu-btn-group { display:flex; flex-direction:column; gap:15px; align-items:center; }
+    .menu-coins { margin-top:22px; display:flex; align-items:center; gap:5px; font-size:14px; color:#6a7baa; }
+    .menu-coins #menu-coin-count { color:#e07c00; font-weight:600; }
+
+    /* ── GAME SCREEN ── */
+    #game-screen { background:#fff9e6; justify-content:flex-start; padding:0; border:3px solid #5b9bd5; border-radius:22px; }
+
+    /*
+      Feature 1: HUD is now a flex-column so the score pill can
+      have the destroy-ad button underneath it.
+      The outer row keeps space-between; the score column stacks
+      the pill + the mini button.
+    */
+    #game-hud {
+      width:100%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:4px 8px 2px; position:relative; z-index:5;
+      /* min-height instead of fixed so the column can grow slightly */
+      min-height:50px;
+    }
+
+    /* Score column — pill on top, destroy-ad btn below */
+    .hud-score-col {
+      display:flex; flex-direction:column; align-items:flex-start; gap:3px;
+    }
+
+    .hud-pill { background:rgba(255,255,255,.55); backdrop-filter:blur(6px); border-radius:10px; padding:4px 10px; display:flex; flex-direction:column; align-items:center; border:1px solid rgba(255,255,255,.8); }
+    .hud-pill-label { font-size:9px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:rgba(80,100,160,.7); line-height:1; }
+    #score-value { font-size:22px; font-weight:700; color:#e07c00; line-height:1.1; text-shadow:0 1px 6px rgba(224,124,0,.3); transition:transform .12s cubic-bezier(.34,1.56,.64,1); min-width:68px; text-align:left; }
+    #score-value.bump { transform:scale(1.28); }
+
+    /* Feature 1: destroy-ad button — compact HUD style under score */
+    #destroy-ad-btn {
+      font-family:'Fredoka',sans-serif;
+      font-size:10px; font-weight:700; line-height:1.2;
+      background:linear-gradient(135deg,#a370f7,#7c3fdd); color:#fff;
+      border:none; border-radius:8px;
+      padding:3px 8px;
+      cursor:pointer;
+      box-shadow:0 2px 0 #5520bb, 0 3px 8px rgba(120,60,220,.3);
+      display:flex; align-items:center; gap:4px;
+      white-space:nowrap;
+      transition:filter .15s, transform .1s;
+    }
+    #destroy-ad-btn:hover  { filter:brightness(1.1); }
+    #destroy-ad-btn:active { transform:translateY(1px); box-shadow:0 1px 0 #5520bb; }
+    /* The custom ad icon inside the button */
+    #destroy-ad-btn .ad-icon {
+      width:14px; height:14px; object-fit:contain; display:inline-block;
+      vertical-align:middle; flex-shrink:0;
+    }
+
+    #next-preview { width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+    #nextCanvas   { border-radius:50%; display:block; }
+
+    .hud-back-btn { font-family:'Fredoka',sans-serif; font-size:12px; font-weight:600; color:#5a6a9a; background:rgba(255,255,255,.6); border:1px solid rgba(150,180,220,.4); border-radius:9px; padding:4px 9px; cursor:pointer; backdrop-filter:blur(4px); transition:color .15s,background .15s; }
+    .hud-back-btn:hover { color:#3a4a8a; background:rgba(255,255,255,.85); }
+
+    .hud-settings-btn { font-size:20px; line-height:1; background:rgba(255,255,255,.6); border:1px solid rgba(150,180,220,.4); border-radius:9px; padding:4px 7px; cursor:pointer; backdrop-filter:blur(4px); transition:background .15s,transform .2s; }
+    .hud-settings-btn:hover { background:rgba(255,255,255,.9); transform:rotate(30deg); }
+
+    /* Canvas — full width of game screen, no visual zoom */
+    #gameCanvas {
+      display:block;
+      width:100%;
+      flex:1;
+      cursor:none;
+      touch-action:none;
+    }
+
+    /* ── BOMB BUTTON (right edge) ── */
+    #bomb-btn {
+      position:absolute; right:-2px; top:50%; z-index:30;
+      font-family:'Fredoka',sans-serif; font-size:11px; font-weight:700; line-height:1.3; text-align:center;
+      background:linear-gradient(145deg,#ff6b6b,#cc2222); color:#fff;
+      border:2px solid #ff9090; border-radius:12px 0 0 12px;
+      padding:8px 7px; cursor:pointer;
+      opacity:0; pointer-events:none;
+      transform:translateY(-50%) translateX(100%);
+      transition:opacity .3s,transform .3s;
+      box-shadow:-3px 0 16px rgba(255,60,60,.4);
+      writing-mode:vertical-rl; white-space:nowrap;
+    }
+    #bomb-btn.visible { opacity:1; pointer-events:all; transform:translateY(-50%) translateX(0); }
+    #bomb-btn:active { filter:brightness(.85); }
+
+    /* ── SHOP ── */
+    #shop-menu { background:linear-gradient(160deg,#eafaf2,#d6f5e6); justify-content:flex-start; padding:18px 16px 14px; gap:0; overflow-y:auto; }
+    .shop-header { width:100%; display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; flex-shrink:0; }
+    .shop-title  { font-size:24px; font-weight:700; color:#2d7a50; }
+    .shop-coins-badge { display:flex; align-items:center; gap:4px; background:rgba(255,255,255,.8); border:1px solid #9edfc0; border-radius:50px; padding:5px 12px; font-size:14px; font-weight:600; color:#e07c00; }
+    .shop-section-label { width:100%; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#5a9a78; margin:12px 0 7px; flex-shrink:0; }
+    .skin-grid,.fruit-skin-grid { width:100%; display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+    .skin-card { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.85); border:2px solid #c4e8d4; border-radius:13px; padding:8px 11px; transition:border-color .2s; box-shadow:0 2px 8px rgba(80,180,120,.1); }
+    .skin-card.equipped { border-color:#2d7a50; box-shadow:0 2px 12px rgba(45,122,80,.2); }
+
+    /* Feature 6: placeholder skin cards are locked/greyed */
+    .skin-card.placeholder {
+      opacity:.65; border-style:dashed; border-color:#a8d4ba;
+      background:rgba(255,255,255,.5);
+    }
+
+    .skin-preview { width:38px; height:38px; border-radius:8px; flex-shrink:0; border:2px solid rgba(0,0,0,.06); overflow:hidden; display:flex; align-items:center; justify-content:center; }
+    .skin-preview svg { width:100%; height:100%; display:block; }
+    .skin-preview img { width:80%; height:80%; object-fit:contain; display:block; }
+    .skin-info { flex:1; }
+    .skin-name  { font-size:14px; font-weight:600; color:#2a4a35; margin-bottom:1px; }
+    .skin-price { font-size:12px; color:#7aaa8a; }
+    .skin-price.free { color:#28a060; }
+    .skin-action-btn { font-family:'Fredoka',sans-serif; font-size:13px; font-weight:600; border:none; border-radius:50px; padding:6px 13px; cursor:pointer; background:linear-gradient(145deg,#ffd166,#ff8c42); color:#5c3400; transition:filter .15s,transform .1s; white-space:nowrap; }
+    .skin-action-btn:hover { filter:brightness(1.08); transform:translateY(-1px); }
+    .skin-action-btn:disabled { background:#d4eadc; color:#8aaa96; cursor:not-allowed; transform:none; filter:none; }
+    .skin-action-btn.unequip { background:linear-gradient(145deg,#4dd9c8,#00a896); color:#fff; }
+    .skin-action-btn.unequip:hover { filter:brightness(1.1); }
+
+    .ad-btn { width:100%; flex-shrink:0; font-family:'Fredoka',sans-serif; font-size:15px; font-weight:600; background:linear-gradient(135deg,#a370f7,#7c3fdd); color:#fff; border:none; border-radius:12px; padding:10px 0; cursor:pointer; box-shadow:0 4px 0 #5520bb; transition:transform .12s,box-shadow .12s; margin-top:4px; }
+    .ad-btn:hover  { transform:translateY(-2px); box-shadow:0 6px 0 #5520bb; }
+    .ad-btn:active { transform:translateY(2px);  box-shadow:0 2px 0 #5520bb; }
+    .promo-row { width:100%; display:flex; gap:7px; flex-shrink:0; margin-top:4px; }
+    .promo-input { flex:1; font-family:'Fredoka',sans-serif; font-size:14px; font-weight:500; background:#fff; color:#2a4a35; border:2px solid #b8dcc8; border-radius:10px; padding:8px 10px; outline:none; transition:border-color .2s; }
+    .promo-input:focus { border-color:#2d7a50; }
+    .promo-input::placeholder { color:#8aaa96; }
+    .promo-claim-btn { font-family:'Fredoka',sans-serif; font-size:14px; font-weight:600; background:#fff; color:#2d7a50; border:2px solid #9edfc0; border-radius:10px; padding:8px 14px; cursor:pointer; transition:filter .15s; }
+    .promo-claim-btn:hover { filter:brightness(1.06); }
+    .shop-back { margin-top:14px; flex-shrink:0; }
+
+    /* ── GAME OVER ── */
+    #game-over-screen { background:rgba(255,248,230,.96); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-radius:22px; justify-content:flex-start; padding:18px 18px 14px; overflow-y:auto; }
+    .go-title { font-size:clamp(22px,6vw,30px); font-weight:700; color:#e07c00; text-shadow:0 2px 12px rgba(224,124,0,.25); text-align:center; margin-bottom:2px; flex-shrink:0; }
+    #go-new-record { display:none; font-size:13px; font-weight:700; color:#fff; background:linear-gradient(90deg,#ffd166,#ff8c42); border-radius:50px; padding:4px 14px; text-align:center; flex-shrink:0; margin-bottom:4px; animation:pulse .6s ease-in-out 3; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    #go-coin-bonus { display:none; font-size:12px; font-weight:700; letter-spacing:1px; color:#b86000; text-align:center; background:rgba(255,209,102,.2); border:1px solid rgba(255,180,60,.4); border-radius:8px; padding:3px 10px; flex-shrink:0; margin-bottom:4px; }
+    .go-score-row { text-align:center; margin-bottom:10px; flex-shrink:0; }
+    .go-score-label { font-size:11px; color:#8a9abd; }
+    .go-score-value { font-size:40px; font-weight:700; color:#3a4870; line-height:1; }
+    .go-coins-row { width:100%; background:rgba(255,255,255,.8); border:1px solid #e0d4b8; border-radius:12px; padding:8px 13px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-shrink:0; }
+    .go-coins-label  { font-size:13px; color:#8a9abd; }
+    .go-coins-earned { font-size:18px; font-weight:700; color:#e07c00; display:flex; align-items:center; gap:3px; }
+    .go-coins-formula{ font-size:10px; color:#aab0c8; margin-top:1px; }
+    .go-stats-title  { width:100%; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#8a9abd; margin-bottom:6px; flex-shrink:0; }
+    .go-stats-grid   { width:100%; display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:12px; flex-shrink:0; }
+    .stat-chip { background:rgba(255,255,255,.75); border:1px solid #e8dfc8; border-radius:9px; padding:5px 8px; display:flex; align-items:center; gap:5px; font-size:12px; color:#5a6a8a; }
+    /*
+      Feature 5: stat-emoji is now an <img>.
+      Keep width/height small so it fits in the chip.
+    */
+    .stat-chip .stat-fruit-img { width:22px; height:22px; object-fit:contain; flex-shrink:0; }
+    .stat-chip .stat-emoji { font-size:14px; } /* fallback if img fails */
+    .stat-chip .stat-count { margin-left:auto; font-weight:600; color:#3a4870; }
+    .stat-chip.zero { opacity:.35; }
+    .go-btn-group { display:flex; flex-direction:column; gap:8px; align-items:center; width:100%; flex-shrink:0; }
+    .go-btn-group .btn { width:100%; }
+
+    /* ── MODALS ── */
+    .modal-backdrop { position:absolute; inset:0; background:rgba(150,180,220,.45); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .25s ease; border-radius:22px; }
+    .modal-backdrop.open { opacity:1; pointer-events:all; }
+    .modal-card { background:#ffffff; border:2px solid #c5d8f0; border-radius:20px; padding:24px 22px 20px; width:min(280px,92%); display:flex; flex-direction:column; align-items:center; gap:14px; box-shadow:0 8px 36px rgba(100,140,200,.2),inset 0 1px 0 rgba(255,255,255,.9); }
+    .modal-title   { font-size:22px; font-weight:700; color:#e07c00; text-align:center; margin-bottom:-4px; }
+    .modal-divider { width:100%; height:1px; background:#dce8f4; }
+    .setting-row   { width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .setting-label { font-size:15px; color:#4a5a8a; flex-shrink:0; }
+    .lang-toggle { display:flex; background:#e8f0fc; border-radius:50px; padding:3px; gap:2px; }
+    .lang-btn { font-family:'Fredoka',sans-serif; font-size:13px; font-weight:600; border:none; border-radius:50px; padding:4px 12px; cursor:pointer; background:transparent; color:#8a9abd; transition:background .18s,color .18s; }
+    .lang-btn.active { background:#ffd166; color:#5c3400; }
+    .vol-slider { flex:1; min-width:0; -webkit-appearance:none; appearance:none; height:6px; border-radius:3px; background:#d4e4f8; outline:none; cursor:pointer; }
+    .vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:linear-gradient(145deg,#ffd166,#ff8c42); box-shadow:0 2px 6px rgba(255,140,66,.4); cursor:pointer; }
+    .vol-slider::-moz-range-thumb { width:18px; height:18px; border-radius:50%; border:none; background:linear-gradient(145deg,#ffd166,#ff8c42); cursor:pointer; }
+
+    /* Feature 3: mute toggle button next to each slider */
+    .mute-btn {
+      font-size:16px; line-height:1; padding:3px 6px;
+      background:rgba(255,255,255,.7); border:1px solid #c5d8f0;
+      border-radius:8px; cursor:pointer; flex-shrink:0;
+      transition:background .15s, opacity .15s;
+    }
+    .mute-btn.muted { opacity:.4; background:#ffe0e0; border-color:#ffb0b0; }
+    .mute-btn:hover { background:rgba(255,255,255,1); }
+
+    .color-picker { width:34px; height:26px; border:2px solid #c5d8f0; border-radius:6px; padding:2px; cursor:pointer; background:transparent; outline:none; }
+    .color-picker::-webkit-color-swatch-wrapper { padding:0; }
+    .color-picker::-webkit-color-swatch { border-radius:4px; border:none; }
+    .vol-icon { font-size:18px; cursor:pointer; flex-shrink:0; transition:opacity .15s; }
+    .vol-icon.muted { opacity:.35; }
+    .modal-btn-row { display:flex; gap:10px; width:100%; }
+    .modal-btn-row .btn { flex:1; font-size:16px; padding:10px 0; width:auto; }
+    .quit-confirm-text { font-size:15px; color:#4a5a8a; text-align:center; line-height:1.4; }
+
+    /* ── LOADING ── */
+    #loading-splash { position:absolute; inset:0; background:#fff8ee; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; border-radius:20px; z-index:50; transition:opacity .4s ease; }
+    #loading-splash.hidden { opacity:0; pointer-events:none; }
+    .loading-title { font-size:18px; color:#e07c00; font-weight:600; }
+    #loading-bar-wrap { width:180px; height:7px; background:#f0dfc0; border-radius:4px; overflow:hidden; }
+    #loading-bar { height:100%; background:linear-gradient(90deg,#74c5f5,#ffd166); border-radius:4px; width:0%; transition:width .22s ease; }
+
+    /* ── TOAST ── */
+    #toast { position:absolute; bottom:18px; left:50%; transform:translateX(-50%) translateY(10px); background:#fff; color:#3a4870; font-size:13px; font-weight:600; padding:8px 18px; border-radius:50px; border:2px solid #c5d8f0; white-space:nowrap; z-index:200; opacity:0; pointer-events:none; box-shadow:0 4px 16px rgba(100,140,200,.2); transition:opacity .25s ease,transform .25s ease; }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    /* ── FLOAT LABELS ── */
+    .float-label { position:absolute; font-family:'Fredoka',sans-serif; font-size:18px; font-weight:700; color:#ff8c00; text-shadow:0 1px 4px rgba(255,255,255,.8); pointer-events:none; z-index:40; animation:floatUp .9s ease-out forwards; }
+    @keyframes floatUp { 0%{opacity:1;transform:translateY(0) scale(1)} 60%{opacity:.9;transform:translateY(-28px) scale(1.15)} 100%{opacity:0;transform:translateY(-52px) scale(.8)} }
+  </style>
+</head>
+<body>
+
+<!-- BGM -->
+<audio id="bgm" loop src="assets/bgm.mp3"></audio>
+<!-- SFX -->
+<audio id="sfx-ui-click" src="assets/ui_click.mp3" preload="auto"></audio>
+<audio id="sfx-pause"    src="assets/pause.mp3"    preload="auto"></audio>
+<audio id="sfx-drop"     src="assets/drop.mp3"     preload="auto"></audio>
+
+<div id="app">
+
+  <!-- ① MAIN MENU -->
+  <div id="main-menu" class="screen active">
+    <div class="menu-hs-badge" id="menu-hs-badge">🏆 Best<span id="menu-hs-value">0</span></div>
+    <button class="menu-settings-btn" id="btn-open-settings" aria-label="Settings">⚙️</button>
+    <div class="menu-deco">🍉</div>
+    <h1 class="menu-title">Suika Merge</h1>
+    <p class="menu-sub" data-i18n="tagline">Яблоки · Лимоны · Арбузы</p>
+    <div class="menu-btn-group">
+      <button class="btn btn-primary" id="btn-start" data-i18n="start">▶ Начать</button>
+      <button class="btn btn-secondary" id="btn-shop">
+        <img src="assets/shop_icon.png" class="ui-icon" alt="🛍"> <span data-i18n="shop">Магазин</span>
+      </button>
+    </div>
+    <div class="menu-coins">
+      <img src="assets/coin.png" class="ui-icon" alt="coin">
+      <span id="menu-coin-count">0</span>
+      <span data-i18n="coins">монет</span>
+    </div>
+  </div>
+
+  <!-- ② GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div id="loading-splash">
+      <div class="loading-title" data-i18n="loading">🍓 Загрузка…</div>
+      <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+    </div>
+
+    <!--
+      Feature 1: HUD restructured.
+      Left: score column (pill + destroy-ad btn underneath)
+      Centre: quit + settings
+      Right: next preview pill
+    -->
+    <div id="game-hud">
+      <!-- Score column: pill on top, destroy-3 button below -->
+      <div class="hud-score-col">
+        <div class="hud-pill">
+          <span class="hud-pill-label" data-i18n="score">Очки</span>
+          <span id="score-value">0</span>
+        </div>
+        <!-- Feature 1 & 4: destroy-3 ad button with custom icon -->
+        <button id="destroy-ad-btn" aria-label="Watch ad to destroy 3 fruits">
+          <img src="assets/ad_icon.png" class="ad-icon" alt="📺">
+          Убрать 3
+        </button>
+      </div>
+
+      <!-- Centre controls -->
+      <div style="display:flex;gap:5px;align-items:center;">
+        <button class="hud-back-btn" id="btn-back-to-menu" data-i18n="quit">✕ Выйти</button>
+        <button class="hud-settings-btn" id="btn-ingame-settings" aria-label="Settings">⚙️</button>
+      </div>
+
+      <!-- Next preview pill -->
+      <div class="hud-pill" style="align-items:center;">
+        <span class="hud-pill-label" data-i18n="next">Далее</span>
+        <div id="next-preview"><canvas id="nextCanvas" width="28" height="28"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Feature 2: canvas narrow + scaled -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Bomb button (right edge, shown when danger) -->
+    <button id="bomb-btn" aria-label="Emergency bomb">
+      💣 Взрыв<br/>3 за <span id="bomb-cost-display">250</span><img src="assets/coin.png" class="ui-icon" alt="coin">
+    </button>
+  </div>
+
+  <!-- ③ SHOP -->
+  <div id="shop-menu" class="screen">
+    <div class="shop-header">
+      <h2 class="shop-title" data-i18n="shop">🛍 Магазин</h2>
+      <div class="shop-coins-badge"><img src="assets/coin.png" class="ui-icon" alt="coin"> <span id="shop-coin-count">0</span></div>
+    </div>
+    <p class="shop-section-label" data-i18n="boardSkins">Фоны</p>
+    <div class="skin-grid" id="skin-grid"></div>
+    <p class="shop-section-label" data-i18n="fruitSkins">Скины фруктов</p>
+    <div class="fruit-skin-grid" id="fruit-skin-grid"></div>
+    <!-- Feature 6: placeholder cards added below the real fruit skins by JS -->
+    <div id="placeholder-skin-grid"></div>
+    <p class="shop-section-label" data-i18n="earnMore">Заработать монеты</p>
+    <button class="ad-btn" id="btn-watch-ad" data-i18n="watchAd">📺 Смотреть рекламу (+100 монет)</button>
+    <p class="shop-section-label" data-i18n="promoSection">Промокод</p>
+    <div class="promo-row">
+      <input type="text" class="promo-input" id="promo-input"
+             data-i18n-placeholder="promoPlaceholder" placeholder="Введи код…" autocomplete="off" />
+      <button class="promo-claim-btn" id="btn-promo-claim" data-i18n="claim">Применить</button>
+    </div>
+    <button class="btn btn-ghost shop-back" id="btn-shop-back" data-i18n="backMenu">← Меню</button>
+  </div>
+
+  <!-- ④ GAME OVER -->
+  <div id="game-over-screen" class="screen">
+    <p class="go-title" data-i18n="gameOver">🍉 Игра окончена!</p>
+    <div id="go-new-record">🏆 НОВЫЙ РЕКОРД!</div>
+    <div id="go-coin-bonus">⚡ x2 Бонус монет!</div>
+    <div class="go-score-row">
+      <div class="go-score-label" data-i18n="finalScore">Финальный счёт</div>
+      <div class="go-score-value" id="go-final-score">0</div>
+    </div>
+    <div class="go-coins-row">
+      <div>
+        <div class="go-coins-label" data-i18n="coinsEarned">Монеты заработаны</div>
+        <div class="go-coins-formula" data-i18n="coinsFormula">10 очков = 1 монета</div>
+      </div>
+      <div class="go-coins-earned"><img src="assets/coin.png" class="ui-icon" alt="coin"> <span id="go-coins-earned">0</span></div>
+    </div>
+    <p class="go-stats-title" data-i18n="fruitsThisRound">Фрукты за раунд</p>
+    <div class="go-stats-grid" id="go-stats-grid"></div>
+    <div class="go-btn-group">
+      <button class="btn btn-primary"   id="btn-play-again" data-i18n="playAgain">▶ Играть снова</button>
+      <button class="btn btn-secondary" id="btn-go-to-menu" data-i18n="mainMenu">⌂ Главное меню</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settings-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <p class="modal-title" data-i18n="settings">⚙️ Настройки</p>
+      <div class="modal-divider"></div>
+
+      <!-- Language -->
+      <div class="setting-row">
+        <span class="setting-label" data-i18n="language">Язык</span>
+        <div class="lang-toggle">
+          <button class="lang-btn" id="lang-ru" onclick="setLang('ru')">RU</button>
+          <button class="lang-btn" id="lang-en" onclick="setLang('en')">EN</button>
+        </div>
+      </div>
+
+      <!-- Music volume + mute toggle (Feature 3) -->
+      <div class="setting-row">
+        <!-- Clicking the icon quickly mutes/unmutes BGM -->
+        <span class="vol-icon" id="icon-music" title="Mute/Unmute music">🎵</span>
+        <span class="setting-label" data-i18n="music">Музыка</span>
+        <input type="range" class="vol-slider" id="vol-slider" min="0" max="1" step="0.05" value="0.5" />
+        <button class="mute-btn" id="btn-mute-music" title="Mute/Unmute music">🔇</button>
+      </div>
+
+      <!-- SFX volume + mute toggle (Feature 3) -->
+      <div class="setting-row">
+        <!-- Clicking the icon quickly mutes/unmutes SFX -->
+        <span class="vol-icon" id="icon-sfx" title="Mute/Unmute SFX">🔊</span>
+        <span class="setting-label" data-i18n="sfxLabel">Звуки</span>
+        <input type="range" class="vol-slider" id="sfx-slider" min="0" max="1" step="0.05" value="0.5" />
+        <button class="mute-btn" id="btn-mute-sfx" title="Mute/Unmute SFX">🔇</button>
+      </div>
+
+      <!-- Trajectory color -->
+      <div class="setting-row">
+        <span class="vol-icon">🎯</span>
+        <span class="setting-label" data-i18n="trajColor">Прицел</span>
+        <input type="color" class="color-picker" id="traj-color-picker" value="#ffffff" />
+      </div>
+
+      <div class="modal-btn-row">
+        <button class="btn btn-secondary" id="btn-settings-close" data-i18n="close">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUIT CONFIRM MODAL -->
+  <div id="quit-confirm-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <p class="modal-title">🚪</p>
+      <p class="quit-confirm-text" data-i18n="quitConfirm">Вы уверены, что хотите завершить игру?</p>
+      <div class="modal-btn-row">
+        <button class="btn btn-secondary" id="btn-quit-cancel"  data-i18n="cancel">Отмена</button>
+        <button class="btn btn-danger"    id="btn-quit-confirm" data-i18n="quitBtn">Завершить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════
+   i18n
+═══════════════════════════════════════════════ */
+const I18N = {
+  ru: {
+    tagline:'Яблоки · Лимоны · Арбузы', start:'▶ Начать', shop:'Магазин',
+    coins:'монет', loading:'🍓 Загрузка…', score:'Очки', next:'Далее', quit:'✕ Выйти',
+    settings:'⚙️ Настройки', language:'Язык', music:'Музыка', sfxLabel:'Звуки', close:'Закрыть',
+    trajColor:'Прицел',
+    boardSkins:'Фоны', earnMore:'Заработать монеты',
+    watchAd:'📺 Смотреть рекламу (+100 монет)',
+    promoSection:'Промокод', promoPlaceholder:'Введи код…', claim:'Применить',
+    fruitSkins:'Скины фруктов',
+    backMenu:'← Меню',
+    gameOver:'🍉 Игра окончена!', finalScore:'Финальный счёт',
+    coinsEarned:'Монеты заработаны', coinsFormula:'10 очков = 1 монета',
+    fruitsThisRound:'Фрукты за раунд', playAgain:'▶ Играть снова', mainMenu:'⌂ Главное меню',
+    quitConfirm:'Вы уверены, что хотите завершить игру?', cancel:'Отмена', quitBtn:'Завершить',
+    skinOn:'✓ Надет', skinEquip:'Надеть', skinUnequip:'Снять',
+    skinBuy:'Купить', skinLocked:'🔒', skinFree:'Бесплатно',
+    adAlert:'📺 Реклама! +100 монет',
+    promoSuccess:'🎉 Промокод принят! +', promoUsed:'⚠️ Уже использован.', promoInvalid:'❌ Неверный код.',
+    newRecord:'🏆 НОВЫЙ РЕКОРД!', coinBonus:'⚡ x2 Бонус монет!',
+    notEnoughCoins:'❌ Недостаточно монет', bombUsed:'💥 Взрыв! -',
+    destroyAdDone:'✂️ 3 фрукта убраны!',
+    destroyAdEmpty:'Нет фруктов на поле!',
+    comingSoon:'Скоро…',
+  },
+  en: {
+    tagline:'Apples · Lemons · Watermelons', start:'▶ Start', shop:'Shop',
+    coins:'coins', loading:'🍓 Loading…', score:'Score', next:'Next', quit:'✕ Quit',
+    settings:'⚙️ Settings', language:'Language', music:'Music', sfxLabel:'Sounds', close:'Close',
+    trajColor:'Aim Line',
+    boardSkins:'Board Skins', earnMore:'Earn More Coins',
+    watchAd:'📺 Watch Ad (+100 Coins)',
+    promoSection:'Promo Code', promoPlaceholder:'Enter code…', claim:'Claim',
+    fruitSkins:'Fruit Skins',
+    backMenu:'← Menu',
+    gameOver:'🍉 Game Over!', finalScore:'Final Score',
+    coinsEarned:'Coins Earned', coinsFormula:'10 pts = 1 coin',
+    fruitsThisRound:'Fruits This Round', playAgain:'▶ Play Again', mainMenu:'⌂ Main Menu',
+    quitConfirm:'Are you sure you want to quit?', cancel:'Cancel', quitBtn:'Quit',
+    skinOn:'✓ On', skinEquip:'Equip', skinUnequip:'Unequip',
+    skinBuy:'Buy', skinLocked:'🔒', skinFree:'Free',
+    adAlert:'📺 Ad shown! +100 coins',
+    promoSuccess:'🎉 Promo accepted! +', promoUsed:'⚠️ Already used.', promoInvalid:'❌ Invalid code.',
+    newRecord:'🏆 NEW RECORD!', coinBonus:'⚡ x2 Coins Bonus!',
+    notEnoughCoins:'❌ Not enough coins', bombUsed:'💥 Boom! -',
+    destroyAdDone:'✂️ 3 fruits removed!',
+    destroyAdEmpty:'No fruits on the board!',
+    comingSoon:'Coming Soon…',
+  },
+};
+
+let lang = 'ru';
+function t(k){ return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
+
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.getElementById('lang-ru').classList.toggle('active', lang === 'ru');
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  if(document.getElementById('skin-grid').children.length) buildShopUI();
+  updateBombLabel();
+}
+function setLang(l){ lang = l; saveStorage(); applyI18n(); }
+
+/* ═══════════════════════════════════════════════
+   EVOLUTION CHAIN — UNCHANGED
+═══════════════════════════════════════════════ */
+const EVOLUTION_BASE = [
+  { level:0, name:'Cherry',     emoji:'🍒', src:'assets/0_cherry.png',     radius:20,  points:2    },
+  { level:1, name:'Strawberry', emoji:'🍓', src:'assets/1_strawberry.png', radius:30,  points:4    },
+  { level:2, name:'Grape',      emoji:'🍇', src:'assets/2_grape.png',      radius:40,  points:8    },
+  { level:3, name:'Lemon',      emoji:'🍋', src:'assets/3_lemon.png',      radius:50,  points:16   },
+  { level:4, name:'Orange',     emoji:'🍊', src:'assets/4_orange.png',     radius:62,  points:32   },
+  { level:5, name:'Apple',      emoji:'🍎', src:'assets/5_apple.png',      radius:74,  points:64   },
+  { level:6, name:'Peach',      emoji:'🍑', src:'assets/6_peach.png',      radius:88,  points:128  },
+  { level:7, name:'Coconut',    emoji:'🥥', src:'assets/7_coconut.png',    radius:104, points:256  },
+  { level:8, name:'Pineapple',  emoji:'🍍', src:'assets/8_pineapple.png',  radius:122, points:512  },
+  { level:9, name:'Watermelon', emoji:'🍉', src:'assets/9_watermelon.png', radius:140, points:1024 },
+];
+let EVOLUTION = EVOLUTION_BASE.map(e => ({ ...e }));
+
+/* ═══════════════════════════════════════════════
+   FRUIT SKINS
+   Feature 6: gold_apple added
+═══════════════════════════════════════════════ */
+const FRUIT_SKINS = [
+  { id:'default',    name:'Default 🍒',    price:0,    overrides:{} },
+  { id:'green_grape',name:'Green Grape 🍏',price:500,  overrides:{ 2:'assets/skins/green_grape.png' } },
+  { id:'green_lemon',name:'Green Lemon 🍈',price:400,  overrides:{ 3:'assets/skins/green_lemon.png' } },
+  { id:'gold_apple', name:'Charmed Apple 🍏', price:2000, overrides:{ 5:'assets/skins/gold_apple.png'  } },
+];
+
+/* ═══════════════════════════════════════════════
+   BOARD SKIN PATTERNS — unchanged
+═══════════════════════════════════════════════ */
+function drawSakuraPattern(ctx,w,h){const petals=[{x:28,y:60,a:.3,s:1},{x:270,y:45,a:.55,s:.8},{x:150,y:130,a:.9,s:1.1},{x:60,y:240,a:1.6,s:.9},{x:290,y:190,a:2.1,s:.7},{x:110,y:370,a:.1,s:1},{x:250,y:350,a:1.2,s:1.2},{x:30,y:420,a:2.5,s:.85},{x:200,y:90,a:1.8,s:.95},{x:80,y:310,a:.7,s:1.05},{x:300,y:300,a:3,s:.75},{x:170,y:450,a:2.2,s:.9}];ctx.save();petals.forEach(p=>{ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a);ctx.globalAlpha=.13;for(let i=0;i<5;i++){ctx.save();ctx.rotate((i*Math.PI*2)/5);const r=5*p.s;ctx.beginPath();ctx.ellipse(0,-r*1.4,r*.7,r,0,0,Math.PI*2);ctx.fillStyle='#e8a0b4';ctx.fill();ctx.restore();}ctx.beginPath();ctx.arc(0,0,2*p.s,0,Math.PI*2);ctx.fillStyle='#f7c5d0';ctx.globalAlpha=.18;ctx.fill();ctx.restore();});ctx.restore();}
+function drawForestPattern(ctx,w,h){const HR=26,HH=HR*Math.sqrt(3),CW=HR*1.5;const cols=Math.ceil(w/CW)+2,rows=Math.ceil(h/(HH/2))+2;ctx.save();ctx.globalAlpha=.09;ctx.strokeStyle='#7ec87e';ctx.lineWidth=1.2;for(let c=-1;c<cols;c++)for(let r=-1;r<rows;r++){const cx=c*CW,cy=r*HH+(c%2===0?0:HH/2);ctx.beginPath();for(let k=0;k<6;k++){const a=(Math.PI/180)*(60*k),vx=cx+HR*Math.cos(a),vy=cy+HR*Math.sin(a);k===0?ctx.moveTo(vx,vy):ctx.lineTo(vx,vy);}ctx.closePath();ctx.stroke();}ctx.globalAlpha=.12;ctx.fillStyle='#5ab85a';[{x:50,y:80,a:.4},{x:270,y:110,a:-.3},{x:130,y:260,a:1.1},{x:290,y:350,a:-.7},{x:40,y:390,a:.9},{x:200,y:430,a:-.2}].forEach(l=>{ctx.save();ctx.translate(l.x,l.y);ctx.rotate(l.a);ctx.beginPath();ctx.moveTo(0,-12);ctx.quadraticCurveTo(10,0,0,12);ctx.quadraticCurveTo(-10,0,0,-12);ctx.closePath();ctx.fill();ctx.restore();});ctx.restore();}
+function drawWoodPattern(ctx,w,h){ctx.save();ctx.globalAlpha=.07;ctx.strokeStyle='#8d6e63';ctx.lineWidth=2;for(let o=-h;o<w+h;o+=18){ctx.beginPath();ctx.moveTo(o,0);ctx.lineTo(o+h,h);ctx.stroke();}ctx.restore();}
+function drawOceanPattern(ctx,w,h){ctx.save();ctx.globalAlpha=.1;ctx.strokeStyle='#4fc3f7';ctx.lineWidth=1.5;const wH=28,waves=Math.ceil(h/wH)+1;for(let i=0;i<waves;i++){const y=i*wH;ctx.beginPath();ctx.moveTo(0,y);for(let x=0;x<w;x+=4)ctx.lineTo(x,y+Math.sin((x/w)*Math.PI*4+i)*6);ctx.stroke();}ctx.restore();}
+function drawCyberpunkPattern(ctx,w,h){ctx.save();ctx.globalAlpha=.06;ctx.strokeStyle='#00ff88';ctx.lineWidth=1;for(let y=0;y<h;y+=4){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}ctx.globalAlpha=.04;ctx.strokeStyle='#ff00aa';ctx.lineWidth=3;[30,120,200,290].forEach(x=>{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();});ctx.restore();}
+
+const SKINS = [
+  {id:'classic',   name:'Classic Cream',   price:0,    bgColor:'#fff9e6',borderColor:'#3d5a80',previewBg:'#fff9e6',previewBorder:'#3d5a80',drawPattern:null},
+  {id:'neon',      name:'Neon Night',       price:500,  bgColor:'#121214',borderColor:'#ff0055',previewBg:'#121214',previewBorder:'#ff0055',drawPattern:null},
+  {id:'mint',      name:'Mint Fresh',       price:1000, bgColor:'#e8f5e9',borderColor:'#2e7d32',previewBg:'#e8f5e9',previewBorder:'#2e7d32',drawPattern:null},
+  {id:'sakura',    name:'Sakura Bloom 🌸',  price:750,  bgColor:'#fdf0f5',borderColor:'#d48aa0',previewBg:'#fdf0f5',previewBorder:'#d48aa0',drawPattern:drawSakuraPattern},
+  {id:'forest',    name:'Forest Hex 🌿',    price:750,  bgColor:'#edf7ed',borderColor:'#4a9e4a',previewBg:'#edf7ed',previewBorder:'#4a9e4a',drawPattern:drawForestPattern},
+  {id:'darkwood',  name:'Dark Wood 🪵',      price:600,  bgColor:'#3e2723',borderColor:'#6d4c41',previewBg:'#3e2723',previewBorder:'#6d4c41',drawPattern:drawWoodPattern},
+  {id:'ocean',     name:'Ocean 🌊',          price:600,  bgColor:'#0d47a1',borderColor:'#1976d2',previewBg:'#0d47a1',previewBorder:'#1976d2',drawPattern:drawOceanPattern},
+  {id:'cyberpunk', name:'Cyberpunk ⚡',      price:900,  bgColor:'#050510',borderColor:'#00ff88',previewBg:'#050510',previewBorder:'#00ff88',drawPattern:drawCyberpunkPattern},
+];
+
+const PROMOS = { APPLE:500, PUK:1000 };
+
+/* ═══════════════════════════════════════════════
+   CONSTANTS — unchanged
+═══════════════════════════════════════════════ */
+const RENDER_SCALE      = 1.15;
+const DANGER_ZONE_EXTRA = 100;
+const DROP_COOLDOWN     = 900;
+const GAMEOVER_REST     = 2000;
+const MAX_DROP_LEVEL    = 2;
+const COINS_RATIO       = 10;
+const WALL_T            = 40;
+const BOMB_BASE_COST    = 250;
+const FALLBACK_COLORS   = ['#e74c3c','#e67e22','#8e44ad','#f1c40f','#f39c12','#27ae60','#e91e63','#795548','#ffd700','#2ecc71'];
+
+let CANVAS_W = 320, CANVAS_H = 450, DROP_Y = 38, GAMEOVER_Y = 70;
+
+/* ═══════════════════════════════════════════════
+   DOM REFS
+═══════════════════════════════════════════════ */
+const appEl           = document.getElementById('app');
+const canvas          = document.getElementById('gameCanvas');
+const ctx             = canvas.getContext('2d');
+const nextCanvas      = document.getElementById('nextCanvas');
+const nextCtx         = nextCanvas.getContext('2d');
+const scoreEl         = document.getElementById('score-value');
+const loadingSplash   = document.getElementById('loading-splash');
+const loadingBar      = document.getElementById('loading-bar');
+const skinGridEl      = document.getElementById('skin-grid');
+const fruitSkinGridEl = document.getElementById('fruit-skin-grid');
+const bgmEl           = document.getElementById('bgm');
+const volSlider       = document.getElementById('vol-slider');
+const sfxSlider       = document.getElementById('sfx-slider');
+const settingsModal   = document.getElementById('settings-modal');
+const quitModal       = document.getElementById('quit-confirm-modal');
+const toastEl         = document.getElementById('toast');
+const bombBtn         = document.getElementById('bomb-btn');
+const bombCostDisplay = document.getElementById('bomb-cost-display');
+const trajColorPicker = document.getElementById('traj-color-picker');
+const destroyAdBtn    = document.getElementById('destroy-ad-btn');
+const sfxClick  = document.getElementById('sfx-ui-click');
+const sfxPause  = document.getElementById('sfx-pause');
+const sfxDrop   = document.getElementById('sfx-drop');
+const screens = {
+  menu:     document.getElementById('main-menu'),
+  game:     document.getElementById('game-screen'),
+  shop:     document.getElementById('shop-menu'),
+  gameover: document.getElementById('game-over-screen'),
+};
+
+/* ═══════════════════════════════════════════════
+   PERSISTENT STATE
+   Feature 3: sfxVolume is independent from musicVolume
+═══════════════════════════════════════════════ */
+let coins              = 0;
+let unlockedSkins      = ['classic'];
+let equippedSkin       = 'classic';
+let unlockedFruitSkins = ['default'];
+let equippedFruitSkins = ['default'];
+let usedPromos         = [];
+let musicVolume        = 0.5;
+let sfxVolume          = 0.5;   /* Feature 3 — independent SFX volume */
+let bgmStarted         = false;
+let highScore          = 0;
+let trajColor          = '#ffffff';
+
+function loadStorage(){
+  try {
+    const c   = localStorage.getItem('suika_coins');       if(c)   coins              = parseInt(c,10)||0;
+    const u   = localStorage.getItem('suika_unlocked');    if(u)   unlockedSkins      = JSON.parse(u);
+    const e   = localStorage.getItem('suika_equipped');    if(e)   equippedSkin       = e;
+    const uf  = localStorage.getItem('suika_unlocked_fs'); if(uf)  unlockedFruitSkins = JSON.parse(uf);
+    const efs = localStorage.getItem('suika_equipped_fsa');
+    if(efs){ const parsed=JSON.parse(efs); equippedFruitSkins=Array.isArray(parsed)?parsed:[parsed]; }
+    const p   = localStorage.getItem('suika_promos');      if(p)   usedPromos         = JSON.parse(p);
+    const lg  = localStorage.getItem('suika_lang');        if(lg)  lang               = lg;
+    const mv  = localStorage.getItem('suika_vol');         if(mv)  musicVolume        = parseFloat(mv)||0.5;
+    const sv  = localStorage.getItem('suika_sfx_vol');     if(sv)  sfxVolume          = parseFloat(sv)||0.5;
+    const hs  = localStorage.getItem('suika_hs');          if(hs)  highScore          = parseInt(hs,10)||0;
+    const tc  = localStorage.getItem('suika_trajcolor');   if(tc)  trajColor          = tc;
+  } catch(_){}
+}
+
+function saveStorage(){
+  try {
+    localStorage.setItem('suika_coins',       coins);
+    localStorage.setItem('suika_unlocked',    JSON.stringify(unlockedSkins));
+    localStorage.setItem('suika_equipped',    equippedSkin);
+    localStorage.setItem('suika_unlocked_fs', JSON.stringify(unlockedFruitSkins));
+    localStorage.setItem('suika_equipped_fsa', JSON.stringify(equippedFruitSkins));
+    localStorage.setItem('suika_promos',      JSON.stringify(usedPromos));
+    localStorage.setItem('suika_lang',        lang);
+    localStorage.setItem('suika_vol',         musicVolume);
+    localStorage.setItem('suika_sfx_vol',     sfxVolume);   /* Feature 3 */
+    localStorage.setItem('suika_hs',          highScore);
+    localStorage.setItem('suika_trajcolor',   trajColor);
+  } catch(_){}
+}
+
+/* ═══════════════════════════════════════════════
+   SCREEN STATE MACHINE
+═══════════════════════════════════════════════ */
+let currentScreen = 'menu';
+function showScreen(n){
+  Object.entries(screens).forEach(([k,el])=>el.classList.toggle('active',k===n));
+  currentScreen=n;
+}
+
+/* ═══════════════════════════════════════════════
+   Feature 3 — SFX helper
+   Uses independent sfxVolume instead of musicVolume
+═══════════════════════════════════════════════ */
+function playSound(el){
+  if(!el) return;
+  try {
+    el.volume = sfxVolume;
+    el.currentTime = 0;
+    el.play().catch(()=>{});
+  } catch(_){}
+}
+
+/* ═══════════════════════════════════════════════
+   Feature 3 — Mute toggle helpers
+   Quickly toggle between 0 and the last non-zero value
+═══════════════════════════════════════════════ */
+let lastMusicVol = 0.5;  // remember last non-zero value for un-mute
+let lastSfxVol   = 0.5;
+
+function syncMuteUI(){
+  /* Music icon + button */
+  const musicMuted = musicVolume === 0;
+  document.getElementById('icon-music').classList.toggle('muted', musicMuted);
+  document.getElementById('btn-mute-music').classList.toggle('muted', musicMuted);
+  document.getElementById('btn-mute-music').textContent = musicMuted ? '🔇' : '🔊';
+
+  /* SFX icon + button */
+  const sfxMuted = sfxVolume === 0;
+  document.getElementById('icon-sfx').classList.toggle('muted', sfxMuted);
+  document.getElementById('btn-mute-sfx').classList.toggle('muted', sfxMuted);
+  document.getElementById('btn-mute-sfx').textContent = sfxMuted ? '🔇' : '🔊';
+}
+
+function toggleMuteMusic(){
+  if(musicVolume > 0){
+    lastMusicVol = musicVolume;
+    musicVolume  = 0;
+  } else {
+    musicVolume  = lastMusicVol || 0.5;
+  }
+  bgmEl.volume   = musicVolume;
+  volSlider.value = musicVolume;
+  saveStorage(); syncMuteUI();
+}
+
+function toggleMuteSfx(){
+  if(sfxVolume > 0){
+    lastSfxVol = sfxVolume;
+    sfxVolume  = 0;
+  } else {
+    sfxVolume  = lastSfxVol || 0.5;
+  }
+  sfxSlider.value = sfxVolume;
+  saveStorage(); syncMuteUI();
+}
+
+/* ═══════════════════════════════════════════════
+   Pause / Resume helpers
+═══════════════════════════════════════════════ */
+function openSettingsModal(){
+  playSound(sfxPause);
+  if(currentScreen === 'game' && runner && !gameOver) Runner.stop(runner);
+  volSlider.value     = musicVolume;
+  sfxSlider.value     = sfxVolume;
+  trajColorPicker.value = trajColor;
+  syncMuteUI();
+  settingsModal.classList.add('open');
+}
+function closeSettingsModal(){
+  playSound(sfxPause);
+  settingsModal.classList.remove('open');
+  if(currentScreen === 'game' && runner && !gameOver) Runner.run(runner, engine);
+}
+function openModal(el)  { el.classList.add('open'); }
+function closeModal(el) { el.classList.remove('open'); }
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+let toastTimer=null;
+function showToast(msg){
+  toastEl.textContent=msg;
+  toastEl.classList.add('show');
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2800);
+}
+
+/* ═══════════════════════════════════════════════
+   FLOAT LABELS
+═══════════════════════════════════════════════ */
+function spawnFloatLabel(lx,ly,text){
+  const rect=canvas.getBoundingClientRect(),ar=appEl.getBoundingClientRect();
+  const sx=rect.width/CANVAS_W,sy=rect.height/CANVAS_H;
+  const ax=rect.left-ar.left+lx*sx,ay=rect.top-ar.top+ly*sy+50;
+  const lbl=document.createElement('div');
+  lbl.className='float-label';lbl.textContent=text;
+  lbl.style.left=ax+'px';lbl.style.top=ay+'px';
+  appEl.appendChild(lbl);setTimeout(()=>lbl.remove(),950);
+}
+
+/* ═══════════════════════════════════════════════
+   AUDIO
+═══════════════════════════════════════════════ */
+function startBGM(){
+  if(bgmStarted)return;
+  bgmEl.volume=musicVolume;bgmEl.play().catch(()=>{});bgmStarted=true;
+}
+
+/* ═══════════════════════════════════════════════
+   GAME STATE
+═══════════════════════════════════════════════ */
+let score=0,mouseX=160,currentLevel=0,nextLevel=0;
+let canDrop=true,gameOver=false,aboveLineTime={},fruitCounts={},rAFrunning=false;
+let bombCost=BOMB_BASE_COST,bombVisible=false;
+
+/* ═══════════════════════════════════════════════
+   MATTER.JS
+═══════════════════════════════════════════════ */
+const {Engine,Runner,Bodies,Body,World,Events,Composite}=Matter;
+let engine,runner,world,pendingMerges=new Set();
+
+/* ═══════════════════════════════════════════════
+   §1  RESPONSIVE SIZING
+═══════════════════════════════════════════════ */
+function initSizes(){
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth;
+  const cssH = canvas.clientHeight;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  CANVAS_W   = cssW;
+  CANVAS_H   = cssH;
+  DROP_Y     = Math.round(CANVAS_H * 0.08);
+  GAMEOVER_Y = Math.round(CANVAS_H * 0.14);
+  if(engine) rebuildWalls();
+}
+
+/* ═══════════════════════════════════════════════
+   §2  BFS BACKGROUND REMOVAL — unchanged
+═══════════════════════════════════════════════ */
+let assetsLoaded=false;
+const WHITE_THRESH=230;
+function removeBgWhite(img){
+  const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+  const oc=document.createElement('canvas');oc.width=w;oc.height=h;
+  const oc2=oc.getContext('2d',{willReadFrequently:true});
+  oc2.drawImage(img,0,0,w,h);
+  const id=oc2.getImageData(0,0,w,h),d=id.data;
+  const idx=(x,y)=>(y*w+x)*4;
+  const isW=(x,y)=>{const i=idx(x,y);return d[i+3]>0&&d[i]>=WHITE_THRESH&&d[i+1]>=WHITE_THRESH&&d[i+2]>=WHITE_THRESH;};
+  const er=(x,y)=>{d[idx(x,y)+3]=0;};
+  const vis=new Uint8Array(w*h),q=new Int32Array(w*h);let head=0,tail=0;
+  const en=(x,y)=>{if(x<0||x>=w||y<0||y>=h)return;const vi=y*w+x;if(vis[vi]||!isW(x,y))return;vis[vi]=1;q[tail++]=(y<<16)|x;};
+  for(let x=0;x<w;x++){en(x,0);en(x,h-1);}
+  for(let y=1;y<h-1;y++){en(0,y);en(w-1,y);}
+  while(head<tail){const pk=q[head++];const px=pk&0xFFFF,py=(pk>>>16)&0xFFFF;er(px,py);en(px+1,py);en(px-1,py);en(px,py+1);en(px,py-1);}
+  oc2.putImageData(id,0,0);return oc;
+}
+function preloadImages(onComplete){
+  let done=0;const total=EVOLUTION_BASE.length;
+  EVOLUTION_BASE.forEach((tier,i)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{const p=removeBgWhite(img);tier.img=p;EVOLUTION[i].img=p;}
+      catch(e){tier.img=img;EVOLUTION[i].img=img;}
+      tier.imgLoaded=true;EVOLUTION[i].imgLoaded=true;
+      loadingBar.style.width=`${(++done/total)*100}%`;
+      if(done===total){assetsLoaded=true;onComplete();}
+    };
+    img.onerror=()=>{
+      tier.img=null;tier.imgLoaded=false;EVOLUTION[i].img=null;EVOLUTION[i].imgLoaded=false;
+      loadingBar.style.width=`${(++done/total)*100}%`;
+      if(done===total){assetsLoaded=true;onComplete();}
+    };
+    img.src=tier.src;
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   §3  PHYSICS — unchanged
+═══════════════════════════════════════════════ */
+function initPhysics(){
+  engine=Engine.create({gravity:{x:0,y:1.5}});world=engine.world;
+  buildWalls();
+  Events.on(engine,'collisionStart',handleCollisions);
+  runner=Runner.create();Runner.run(runner,engine);
+}
+function buildWalls(){
+  const wo={isStatic:true,friction:.3,restitution:.1};
+  /* Стена точно на CANVAS_H — фрукты останавливаются у видимого края */
+  World.add(world,[
+    Bodies.rectangle(CANVAS_W/2,      CANVAS_H+WALL_T/2, CANVAS_W+WALL_T*2, WALL_T, {...wo,label:'wall-bottom'}),
+    Bodies.rectangle(-WALL_T/2,       CANVAS_H/2,        WALL_T, CANVAS_H*2, {...wo,label:'wall-left'}),
+    Bodies.rectangle(CANVAS_W+WALL_T/2, CANVAS_H/2,      WALL_T, CANVAS_H*2, {...wo,label:'wall-right'}),
+  ]);
+}
+function rebuildWalls(){
+  Composite.allBodies(world).forEach(b=>{if(b.label&&b.label.startsWith('wall'))World.remove(world,b);});
+  buildWalls();
+}
+function destroyPhysics(){
+  if(runner)Runner.stop(runner);
+  if(engine){World.clear(world);Engine.clear(engine);}
+}
+
+/* ═══════════════════════════════════════════════
+   §4  FRUIT FACTORY
+   ⚠️  HITBOXES: DO NOT TOUCH — exact values preserved
+═══════════════════════════════════════════════ */
+function createFruitBody(x,y,level,isStatic=false){
+  const tier=EVOLUTION[level];
+  let hitboxMultiplier = 0.8;
+  if      (level === 9) hitboxMultiplier = 0.74;
+  else if (level === 8) hitboxMultiplier = 0.77;
+  else if (level === 7) hitboxMultiplier = 0.75;
+  else if (level === 4) hitboxMultiplier = 0.75;
+  else if (level === 3) hitboxMultiplier = 0.75;
+  else if (level === 0) hitboxMultiplier = 0.72;
+  const physicsRadius = tier.radius * hitboxMultiplier;
+  const body = Bodies.circle(x, y, physicsRadius, {
+    density:0.08, friction:0.01, restitution:0.2,
+    isStatic, label:'fruit', customLevel:level,
+  });
+  body.customLevel = level;
+  return body;
+}
+
+/* ═══════════════════════════════════════════════
+   §5  DROP
+═══════════════════════════════════════════════ */
+function dropFruit(){
+  if(!canDrop||gameOver)return;
+  const tier=EVOLUTION[currentLevel];
+  const cx=Math.max(tier.radius+2,Math.min(CANVAS_W-tier.radius-2,mouseX));
+  World.add(world,createFruitBody(cx,DROP_Y,currentLevel));
+  fruitCounts[currentLevel]=(fruitCounts[currentLevel]||0)+1;
+  currentLevel=nextLevel;nextLevel=randomLevel();drawNextPreview();
+  playSound(sfxDrop);
+  canDrop=false;setTimeout(()=>{canDrop=true;},DROP_COOLDOWN);
+}
+function randomLevel(){return Math.floor(Math.random()*(MAX_DROP_LEVEL+1));}
+
+/* ═══════════════════════════════════════════════
+   §6  COLLISIONS — unchanged
+═══════════════════════════════════════════════ */
+function handleCollisions(event){
+  event.pairs.forEach(({bodyA,bodyB})=>{
+    if(bodyA.customLevel===undefined||bodyB.customLevel===undefined)return;
+    if(bodyA.customLevel!==bodyB.customLevel)return;
+    if(pendingMerges.has(bodyA.id)||pendingMerges.has(bodyB.id))return;
+    const level=bodyA.customLevel;if(level>=EVOLUTION.length-1)return;
+    pendingMerges.add(bodyA.id);pendingMerges.add(bodyB.id);
+    const midX=(bodyA.position.x+bodyB.position.x)/2,midY=(bodyA.position.y+bodyB.position.y)/2;
+    setTimeout(()=>{
+      World.remove(world,bodyA);World.remove(world,bodyB);
+      pendingMerges.delete(bodyA.id);pendingMerges.delete(bodyB.id);
+      const nl=level+1,merged=createFruitBody(midX,midY,nl);
+      World.add(world,merged);
+      fruitCounts[nl]=(fruitCounts[nl]||0)+1;
+      const pts=EVOLUTION[nl].points;addScore(pts);
+      spawnFloatLabel(midX,midY,'+'+pts);
+      Body.setVelocity(merged,{x:(Math.random()-.5)*2,y:-1.5});
+    },0);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   §7  SCORE — unchanged
+═══════════════════════════════════════════════ */
+function addScore(pts){
+  score+=pts;scoreEl.textContent=score.toLocaleString();
+  scoreEl.classList.remove('bump');void scoreEl.offsetWidth;scoreEl.classList.add('bump');
+  setTimeout(()=>scoreEl.classList.remove('bump'),150);
+}
+
+/* ═══════════════════════════════════════════════
+   §8  GAME OVER CHECK — unchanged
+═══════════════════════════════════════════════ */
+function checkGameOver(){
+  const now=performance.now();
+  const BOMB_AHEAD=60;
+  let triggerBomb=false;
+  for(const body of Composite.allBodies(world)){
+    if(body.isStatic||body.customLevel===undefined)continue;
+    const speed=Math.hypot(body.velocity.x,body.velocity.y);
+    const topY=body.position.y-EVOLUTION[body.customLevel].radius;
+    if(topY<GAMEOVER_Y+BOMB_AHEAD&&speed<.5)triggerBomb=true;
+    if(topY<GAMEOVER_Y&&speed<.5){
+      if(!aboveLineTime[body.id])aboveLineTime[body.id]=now;
+      else if(now-aboveLineTime[body.id]>GAMEOVER_REST){triggerGameOver();return;}
+    } else {delete aboveLineTime[body.id];}
+  }
+  if(triggerBomb&&!bombVisible)showBombButton();
+  else if(!triggerBomb&&bombVisible)hideBombButton();
+}
+
+/* ═══════════════════════════════════════════════
+   §9  TRIGGER GAME OVER
+   Feature 5: stat chips now show <img> from EVOLUTION_BASE.src
+   (always the default asset, ignoring equipped skins)
+═══════════════════════════════════════════════ */
+function triggerGameOver(){
+  if(gameOver)return;gameOver=true;if(runner)Runner.stop(runner);hideBombButton();
+  const oldHS=highScore,isNew=score>oldHS;if(isNew)highScore=score;
+  const diff=score-oldHS,hasBonus=isNew&&diff>=1000;
+  let earned=Math.floor(score/COINS_RATIO);if(hasBonus)earned*=2;
+  coins+=earned;saveStorage();
+  document.getElementById('go-final-score').textContent=score.toLocaleString();
+  document.getElementById('go-coins-earned').textContent=earned.toLocaleString();
+  const nrEl=document.getElementById('go-new-record'),cbEl=document.getElementById('go-coin-bonus');
+  nrEl.style.display=isNew?'block':'none';nrEl.textContent=t('newRecord');
+  cbEl.style.display=hasBonus?'block':'none';cbEl.textContent=t('coinBonus');
+
+  const grid=document.getElementById('go-stats-grid');
+  grid.innerHTML='';
+  EVOLUTION_BASE.forEach(tier=>{
+    const count=fruitCounts[tier.level]||0;
+    const chip=document.createElement('div');
+    chip.className='stat-chip'+(count===0?' zero':'');
+    /*
+      Feature 5: use <img src="…"> pointing to EVOLUTION_BASE[].src
+      (the raw default asset path) so equipped skins are IGNORED.
+      A fallback emoji span is appended in case the image fails to load.
+    */
+    const fruitImg=document.createElement('img');
+    fruitImg.src=tier.src;
+    fruitImg.alt=tier.emoji;
+    fruitImg.className='stat-fruit-img';
+    fruitImg.onerror=()=>{ fruitImg.replaceWith(Object.assign(document.createElement('span'),{className:'stat-emoji',textContent:tier.emoji})); };
+
+    const nameSpan=document.createElement('span');nameSpan.textContent=tier.name;
+    const countSpan=document.createElement('span');countSpan.className='stat-count';countSpan.textContent='\xd7'+count;
+
+    chip.appendChild(fruitImg);chip.appendChild(nameSpan);chip.appendChild(countSpan);
+    grid.appendChild(chip);
+  });
+
+  document.getElementById('menu-hs-value').textContent=highScore.toLocaleString();
+  updateCoinDisplays();closeModal(quitModal);showScreen('gameover');
+}
+
+/* ═══════════════════════════════════════════════
+   §10  BOMB — unchanged
+═══════════════════════════════════════════════ */
+function updateBombLabel(){bombCostDisplay.textContent=bombCost;}
+function showBombButton(){bombVisible=true;bombBtn.classList.add('visible');}
+function hideBombButton(){bombVisible=false;bombBtn.classList.remove('visible');}
+function useBomb(){
+  if(gameOver)return;
+  if(coins<bombCost){showToast(t('notEnoughCoins'));return;}
+  const spent=bombCost;coins-=spent;bombCost*=2;
+  updateCoinDisplays();updateBombLabel();saveStorage();
+  const fruits=Composite.allBodies(world).filter(b=>!b.isStatic&&b.customLevel!==undefined).sort((a,b)=>b.position.y-a.position.y).slice(0,3);
+  fruits.forEach(b=>{spawnFloatLabel(b.position.x,b.position.y,'💥');World.remove(world,b);});
+  showToast(t('bombUsed')+spent);
+}
+
+/* ═══════════════════════════════════════════════
+   Feature 1: handleDestroyAd — removes exactly 3 RANDOM fruits
+═══════════════════════════════════════════════ */
+function handleDestroyAd(){
+  if(gameOver)return;
+  const fruits=Composite.allBodies(world).filter(b=>!b.isStatic&&b.customLevel!==undefined);
+  if(fruits.length===0){ showToast(t('destroyAdEmpty')); return; }
+  console.log('[Suika] Ad shown (destroy-3)');
+  /* Shuffle and take up to 3 random fruits */
+  const toRemove=fruits.sort(()=>Math.random()-.5).slice(0,3);
+  toRemove.forEach(body=>{
+    spawnFloatLabel(body.position.x,body.position.y,'✂️');
+    World.remove(world,body);
+  });
+  showToast(t('destroyAdDone'));
+}
+
+/* ═══════════════════════════════════════════════
+   §11  START / RESTART — unchanged
+═══════════════════════════════════════════════ */
+function startGame(){
+  score=0;gameOver=false;canDrop=true;aboveLineTime={};fruitCounts={};pendingMerges=new Set();
+  bombCost=BOMB_BASE_COST;scoreEl.textContent='0';hideBombButton();
+  destroyPhysics();initPhysics();initSizes();
+  currentLevel=randomLevel();nextLevel=randomLevel();drawNextPreview();
+  applySkin(equippedSkin);showScreen('game');startBGM();
+  if(!rAFrunning){rAFrunning=true;requestAnimationFrame(renderFrame);}
+}
+
+/* ═══════════════════════════════════════════════
+   §12  RENDER LOOP — unchanged
+═══════════════════════════════════════════════ */
+function renderFrame(){
+  requestAnimationFrame(renderFrame);
+  if(currentScreen!=='game')return;
+  const skin=SKINS.find(s=>s.id===equippedSkin)||SKINS[0];
+  const now=performance.now();
+  ctx.clearRect(0,0,CANVAS_W,CANVAS_H);ctx.fillStyle=skin.bgColor;ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+  if(typeof skin.drawPattern==='function')skin.drawPattern(ctx,CANVAS_W,CANVAS_H);
+  ctx.save();ctx.setLineDash([8,6]);ctx.strokeStyle='rgba(220,50,50,.65)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,GAMEOVER_Y);ctx.lineTo(CANVAS_W,GAMEOVER_Y);ctx.stroke();ctx.restore();
+  Composite.allBodies(world).forEach(body=>{
+    if(!body.label||body.label.startsWith('wall')||body.customLevel===undefined)return;
+    const tier=EVOLUTION[body.customLevel];if(!tier)return;
+    const rr=tier.radius*RENDER_SCALE;
+    ctx.save();ctx.translate(body.position.x,body.position.y);ctx.rotate(body.angle);
+    ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);ctx.clip();
+    if(tier.img){ctx.drawImage(tier.img,-rr,-rr,rr*2,rr*2);}
+    else{ctx.fillStyle=FALLBACK_COLORS[body.customLevel%FALLBACK_COLORS.length];ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font=`bold ${Math.max(8,rr*.48)}px Fredoka,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(tier.emoji,0,0);}
+    ctx.restore();
+  });
+  if(!gameOver)drawHeldFruit(canDrop?1:.35);
+  if(!gameOver&&canDrop){
+    const tier=EVOLUTION[currentLevel];
+    const cx=Math.max(tier.radius+2,Math.min(CANVAS_W-tier.radius-2,mouseX));
+    ctx.save();ctx.strokeStyle=trajColor;ctx.lineWidth=1.5;ctx.globalAlpha=.55;
+    ctx.lineDashOffset=-(now*.06%20);ctx.setLineDash([10,10]);
+    ctx.beginPath();ctx.moveTo(cx,DROP_Y+tier.radius);ctx.lineTo(cx,CANVAS_H);ctx.stroke();ctx.restore();
+  }
+  if(!gameOver)checkGameOver();
+}
+
+function drawHeldFruit(alpha){
+  const tier=EVOLUTION[currentLevel],rr=tier.radius*RENDER_SCALE;
+  const cx=Math.max(tier.radius+2,Math.min(CANVAS_W-tier.radius-2,mouseX));
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx,DROP_Y);
+  ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);ctx.clip();
+  if(tier.img){ctx.drawImage(tier.img,-rr,-rr,rr*2,rr*2);}
+  else{ctx.fillStyle=FALLBACK_COLORS[currentLevel];ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font=`bold ${Math.max(8,rr*.48)}px Fredoka,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(tier.emoji,0,0);}
+  ctx.restore();
+}
+
+/* ═══════════════════════════════════════════════
+   §13  NEXT PREVIEW — unchanged
+═══════════════════════════════════════════════ */
+function drawNextPreview(){
+  nextCtx.clearRect(0,0,28,28);const tier=EVOLUTION[nextLevel],sc=Math.min(12,tier.radius);
+  if(tier.img){nextCtx.save();nextCtx.beginPath();nextCtx.arc(14,14,sc,0,Math.PI*2);nextCtx.clip();nextCtx.drawImage(tier.img,14-sc,14-sc,sc*2,sc*2);nextCtx.restore();}
+  else{nextCtx.beginPath();nextCtx.arc(14,14,sc,0,Math.PI*2);nextCtx.fillStyle=FALLBACK_COLORS[nextLevel];nextCtx.fill();nextCtx.fillStyle='#fff';nextCtx.font=`${sc}px Fredoka,sans-serif`;nextCtx.textAlign='center';nextCtx.textBaseline='middle';nextCtx.fillText(tier.emoji,14,14);}
+}
+
+/* ═══════════════════════════════════════════════
+   §14  BOARD SKIN SYSTEM — unchanged
+═══════════════════════════════════════════════ */
+function applySkin(id){
+  const skin=SKINS.find(s=>s.id===id)||SKINS[0];
+  const gs=document.getElementById('game-screen');
+  gs.style.background=skin.bgColor;gs.style.borderColor=skin.borderColor;
+}
+function buildBoardPreviewEl(skin){
+  const w=document.createElement('div');w.className='skin-preview';
+  w.style.background=skin.previewBg;w.style.borderColor=skin.previewBorder;w.style.borderWidth='3px';w.style.borderStyle='solid';
+  const svgMap={
+    sakura:`<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" fill="${skin.previewBg}"/><g transform="translate(19,19)" opacity=".75">${[0,72,144,216,288].map(d=>`<ellipse cx="0" cy="-7" rx="4" ry="6" fill="#e8a0b4" transform="rotate(${d})"/>`).join('')}<circle r="2.5" fill="#f7c5d0"/></g></svg>`,
+    forest:`<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" fill="${skin.previewBg}"/><polygon points="19,5 32,12.5 32,25.5 19,33 6,25.5 6,12.5" fill="none" stroke="#7ec87e" stroke-width="1.5" opacity=".6"/><path d="M19,14 Q24,19 19,24 Q14,19 19,14Z" fill="#5ab85a" opacity=".55"/></svg>`,
+    darkwood:`<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" fill="${skin.previewBg}"/>${[0,8,16,24,32,40].map(o=>`<line x1="${o}" y1="0" x2="${o+38}" y2="38" stroke="#8d6e63" stroke-width="1.5" opacity=".35"/>`).join('')}</svg>`,
+    ocean:`<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" fill="${skin.previewBg}"/>${[6,14,22,30].map(y=>`<path d="M0,${y} Q9,${y-4} 19,${y} Q29,${y+4} 38,${y}" fill="none" stroke="#4fc3f7" stroke-width="1" opacity=".45"/>`).join('')}</svg>`,
+    cyberpunk:`<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="38" fill="${skin.previewBg}"/>${[0,4,8,12,16,20,24,28,32,36].map(y=>`<line x1="0" y1="${y}" x2="38" y2="${y}" stroke="#00ff88" stroke-width=".5" opacity=".18"/>`).join('')}<line x1="10" y1="0" x2="10" y2="38" stroke="#ff00aa" stroke-width="1.5" opacity=".2"/><line x1="28" y1="0" x2="28" y2="38" stroke="#ff00aa" stroke-width="1.5" opacity=".2"/></svg>`,
+  };
+  if(svgMap[skin.id])w.innerHTML=svgMap[skin.id];
+  return w;
+}
+function buildShopUI(){
+  skinGridEl.innerHTML='';
+  SKINS.forEach(skin=>{
+    const unlocked=unlockedSkins.includes(skin.id),equipped=equippedSkin===skin.id,canAfford=coins>=skin.price;
+    const card=document.createElement('div');card.className='skin-card'+(equipped?' equipped':'');
+    const preview=buildBoardPreviewEl(skin);
+    const info=document.createElement('div');info.className='skin-info';
+    info.innerHTML=`<div class="skin-name">${skin.name}</div><div class="skin-price ${skin.price===0?'free':''}">${skin.price===0?t('skinFree'):'<img src="assets/coin.png" class="ui-icon" alt="coin"> '+skin.price}</div>`;
+    const btn=document.createElement('button');btn.className='skin-action-btn';
+    if(equipped){btn.textContent=t('skinOn');btn.disabled=true;}
+    else if(unlocked){btn.textContent=t('skinEquip');btn.onclick=()=>{playSound(sfxClick);equipBoardSkin(skin.id);};}
+    else{btn.disabled=!canAfford;btn.textContent=canAfford?t('skinBuy'):t('skinLocked');if(canAfford)btn.onclick=()=>{playSound(sfxClick);buyBoardSkin(skin.id);};}
+    card.appendChild(preview);card.appendChild(info);card.appendChild(btn);skinGridEl.appendChild(card);
+  });
+}
+function buyBoardSkin(id){const skin=SKINS.find(s=>s.id===id);if(!skin||coins<skin.price)return;coins-=skin.price;unlockedSkins.push(id);equipBoardSkin(id);}
+function equipBoardSkin(id){equippedSkin=id;saveStorage();applySkin(id);updateCoinDisplays();buildShopUI();}
+
+/* ═══════════════════════════════════════════════
+   §15  FRUIT SKIN SYSTEM — unchanged logic,
+        Feature 6: gold_apple in FRUIT_SKINS array above,
+        placeholder cards added by buildFruitSkinUI
+═══════════════════════════════════════════════ */
+function applyFruitSkins(){
+  EVOLUTION_BASE.forEach((base,i)=>{EVOLUTION[i].img=base.img;EVOLUTION[i].imgLoaded=base.imgLoaded;});
+  equippedFruitSkins.forEach(skinId=>{
+    const skin=FRUIT_SKINS.find(s=>s.id===skinId);if(!skin)return;
+    Object.entries(skin.overrides).forEach(([levelStr,srcPath])=>{
+      const i=parseInt(levelStr,10);const img=new Image();
+      img.onload=()=>{try{EVOLUTION[i].img=removeBgWhite(img);}catch(_){EVOLUTION[i].img=img;}EVOLUTION[i].imgLoaded=true;};
+      img.onerror=()=>{EVOLUTION[i].imgLoaded=false;EVOLUTION[i].img=null;};
+      img.src=srcPath;
+    });
+  });
+  saveStorage();
+  if(currentScreen==='shop')buildFruitSkinUI();
+}
+function toggleFruitSkin(skinId){
+  const idx=equippedFruitSkins.indexOf(skinId);
+  if(idx===-1){equippedFruitSkins.push(skinId);}
+  else{if(skinId!=='default')equippedFruitSkins.splice(idx,1);}
+  if(!equippedFruitSkins.includes('default'))equippedFruitSkins.unshift('default');
+  applyFruitSkins();
+}
+function buyFruitSkin(id){
+  const fskin=FRUIT_SKINS.find(s=>s.id===id);if(!fskin||coins<fskin.price)return;
+  coins-=fskin.price;unlockedFruitSkins.push(id);toggleFruitSkin(id);updateCoinDisplays();buildFruitSkinUI();
+}
+function buildFruitSkinUI(){
+  fruitSkinGridEl.innerHTML='';
+  FRUIT_SKINS.forEach(fskin=>{
+    const unlocked=unlockedFruitSkins.includes(fskin.id);
+    const isEquipped=equippedFruitSkins.includes(fskin.id);
+    const canAfford=coins>=fskin.price;
+    const card=document.createElement('div');card.className='skin-card'+(isEquipped?' equipped':'');
+    const preview=document.createElement('div');preview.className='skin-preview';
+    preview.style.background='#f0f8e8';
+    preview.style.borderColor=isEquipped?'#2d7a50':'#c4e8d4';
+    preview.style.borderWidth='2px';preview.style.borderStyle='solid';
+    const overrideEntries=Object.entries(fskin.overrides);
+    if(overrideEntries.length>0){
+      const[,previewSrc]=overrideEntries[0];
+      const previewImg=document.createElement('img');previewImg.src=previewSrc;previewImg.alt=fskin.name;preview.appendChild(previewImg);
+    } else {
+      preview.style.display='flex';preview.style.alignItems='center';preview.style.justifyContent='center';preview.style.fontSize='20px';preview.textContent=EVOLUTION[0].emoji;
+    }
+    const info=document.createElement('div');info.className='skin-info';
+    info.innerHTML=`<div class="skin-name">${fskin.name}</div><div class="skin-price ${fskin.price===0?'free':''}">${fskin.price===0?t('skinFree'):'<img src="assets/coin.png" class="ui-icon" alt="coin"> '+fskin.price}</div>`;
+    const btn=document.createElement('button');btn.className='skin-action-btn';
+    if(!unlocked){
+      btn.disabled=!canAfford;btn.textContent=canAfford?t('skinBuy'):t('skinLocked');
+      if(canAfford)btn.onclick=()=>{playSound(sfxClick);buyFruitSkin(fskin.id);};
+    } else if(fskin.id==='default'){
+      btn.textContent=t('skinOn');btn.disabled=true;
+    } else if(isEquipped){
+      btn.textContent=t('skinUnequip');btn.className+=' unequip';btn.onclick=()=>{playSound(sfxClick);toggleFruitSkin(fskin.id);};
+    } else {
+      btn.textContent=t('skinEquip');btn.onclick=()=>{playSound(sfxClick);toggleFruitSkin(fskin.id);};
+    }
+    card.appendChild(preview);card.appendChild(info);card.appendChild(btn);fruitSkinGridEl.appendChild(card);
+  });
+
+  /* ─── Feature 6: Placeholder "Coming Soon" skin cards ─── */
+  const placeholderGrid = document.getElementById('placeholder-skin-grid');
+  placeholderGrid.innerHTML = '';
+  const placeholders = [
+    { name: lang==='ru' ? 'Скоро…' : 'Coming Soon…', hint: '?' },
+    { name: lang==='ru' ? 'Скоро…' : 'Coming Soon…', hint: '?' },
+  ];
+  placeholders.forEach(ph => {
+    const card = document.createElement('div');
+    card.className = 'skin-card placeholder';
+
+    /* Question-mark preview */
+    const preview = document.createElement('div');
+    preview.className = 'skin-preview';
+    preview.style.cssText = 'background:#e8f8ee;border:2px dashed #a8d4ba;font-size:22px;display:flex;align-items:center;justify-content:center;color:#8aaa96;';
+    preview.textContent = ph.hint;
+
+    const info = document.createElement('div');
+    info.className = 'skin-info';
+    info.innerHTML = `<div class="skin-name" style="color:#8aaa96;">${ph.name}</div>
+                      <div class="skin-price" style="color:#a8c8b0;">🔒 Soon</div>`;
+
+    const btn = document.createElement('button');
+    btn.className = 'skin-action-btn';
+    btn.textContent = '🔒';
+    btn.disabled = true;
+
+    card.appendChild(preview); card.appendChild(info); card.appendChild(btn);
+    placeholderGrid.appendChild(card);
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   §16  COIN DISPLAY
+═══════════════════════════════════════════════ */
+function updateCoinDisplays(){
+  document.getElementById('menu-coin-count').textContent=coins.toLocaleString();
+  document.getElementById('shop-coin-count').textContent=coins.toLocaleString();
+}
+
+/* ═══════════════════════════════════════════════
+   §17  AD STUB (shop earn coins)
+═══════════════════════════════════════════════ */
+function handleWatchAd(){
+  console.log('[Suika] Ad shown!');
+  coins+=100;saveStorage();updateCoinDisplays();buildShopUI();buildFruitSkinUI();
+  showToast(t('adAlert'));
+}
+
+/* ═══════════════════════════════════════════════
+   §18  PROMO CODE
+═══════════════════════════════════════════════ */
+function handlePromoClaim(){
+  const input=document.getElementById('promo-input');
+  const code=(input.value||'').trim().toUpperCase();input.value='';
+  if(!code)return;
+  if(usedPromos.includes(code)){showToast(t('promoUsed'));return;}
+  if(!PROMOS[code]){showToast(t('promoInvalid'));return;}
+  const award=PROMOS[code];coins+=award;usedPromos.push(code);
+  saveStorage();updateCoinDisplays();buildShopUI();buildFruitSkinUI();
+  showToast(t('promoSuccess')+award);
+}
+
+/* ═══════════════════════════════════════════════
+   §19  INPUT — unchanged
+═══════════════════════════════════════════════ */
+function canvasXFromClient(cx){const r=canvas.getBoundingClientRect();return(cx-r.left)*(CANVAS_W/r.width);}
+canvas.addEventListener('mousemove',e=>{mouseX=canvasXFromClient(e.clientX);});
+canvas.addEventListener('click',    e=>{mouseX=canvasXFromClient(e.clientX);dropFruit();});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();mouseX=canvasXFromClient(e.touches[0].clientX);},{passive:false});
+canvas.addEventListener('touchend', e=>{e.preventDefault();if(e.changedTouches.length)mouseX=canvasXFromClient(e.changedTouches[0].clientX);dropFruit();},{passive:false});
+
+/* ═══════════════════════════════════════════════
+   §20  BUTTON WIRING
+═══════════════════════════════════════════════ */
+document.getElementById('btn-start').onclick=()=>{ playSound(sfxClick); startGame(); };
+document.getElementById('btn-shop').onclick=()=>{ playSound(sfxClick); updateCoinDisplays();buildShopUI();buildFruitSkinUI();showScreen('shop'); };
+document.getElementById('btn-open-settings').onclick=()=>{ openSettingsModal(); };
+document.getElementById('btn-shop-back').onclick=()=>{ playSound(sfxClick); showScreen('menu'); };
+document.getElementById('btn-watch-ad').onclick=()=>{ playSound(sfxClick); handleWatchAd(); };
+document.getElementById('btn-promo-claim').onclick=()=>handlePromoClaim();
+document.getElementById('promo-input').addEventListener('keydown',e=>{if(e.key==='Enter')handlePromoClaim();});
+document.getElementById('btn-back-to-menu').onclick=()=>{if(!gameOver)openModal(quitModal);};
+document.getElementById('btn-ingame-settings').onclick=()=>{ openSettingsModal(); };
+document.getElementById('btn-quit-cancel').onclick=()=>closeModal(quitModal);
+document.getElementById('btn-quit-confirm').onclick=()=>{closeModal(quitModal);triggerGameOver();};
+document.getElementById('btn-play-again').onclick=()=>{ playSound(sfxClick); startGame(); };
+document.getElementById('btn-go-to-menu').onclick=()=>{ playSound(sfxClick); updateCoinDisplays();showScreen('menu'); };
+document.getElementById('btn-settings-close').onclick=()=>closeSettingsModal();
+settingsModal.addEventListener('click',e=>{if(e.target===settingsModal)closeSettingsModal();});
+quitModal.addEventListener('click',e=>{if(e.target===quitModal)closeModal(quitModal);});
+
+/* BGM volume slider */
+volSlider.addEventListener('input',()=>{
+  musicVolume=parseFloat(volSlider.value);
+  if(musicVolume>0)lastMusicVol=musicVolume;
+  bgmEl.volume=musicVolume;saveStorage();syncMuteUI();
+});
+
+/* Feature 3: SFX volume slider */
+sfxSlider.addEventListener('input',()=>{
+  sfxVolume=parseFloat(sfxSlider.value);
+  if(sfxVolume>0)lastSfxVol=sfxVolume;
+  saveStorage();syncMuteUI();
+});
+
+/* Feature 3: quick-mute toggle buttons */
+document.getElementById('btn-mute-music').addEventListener('click',()=>toggleMuteMusic());
+document.getElementById('btn-mute-sfx').addEventListener('click',()=>toggleMuteSfx());
+/* Clicking the icon itself also toggles */
+document.getElementById('icon-music').addEventListener('click',()=>toggleMuteMusic());
+document.getElementById('icon-sfx').addEventListener('click',()=>toggleMuteSfx());
+
+trajColorPicker.addEventListener('input',()=>{trajColor=trajColorPicker.value;saveStorage();});
+bombBtn.addEventListener('click',()=>useBomb());
+destroyAdBtn.addEventListener('click',()=>{ handleDestroyAd(); });
+
+/* ═══════════════════════════════════════════════
+   §21  RESIZE — unchanged
+═══════════════════════════════════════════════ */
+let resizeDebounce=null;
+window.addEventListener('resize',()=>{clearTimeout(resizeDebounce);resizeDebounce=setTimeout(()=>{initSizes();mouseX=CANVAS_W/2;},120);});
+
+/* ═══════════════════════════════════════════════
+   §22  BOOTSTRAP
+═══════════════════════════════════════════════ */
+loadStorage();
+bgmEl.volume   = musicVolume;
+volSlider.value = musicVolume;
+sfxSlider.value = sfxVolume;
+trajColorPicker.value = trajColor;
+syncMuteUI();
+applyI18n();updateCoinDisplays();
+document.getElementById('menu-hs-value').textContent=highScore.toLocaleString();
+showScreen('game');
+
+requestAnimationFrame(()=>{
+  initSizes();
+  preloadImages(()=>{
+    loadingSplash.classList.add('hidden');
+    setTimeout(()=>{loadingSplash.style.display='none';},420);
+    applyFruitSkins();
+    applySkin(equippedSkin);
+    showScreen('menu');
+    rAFrunning=true;requestAnimationFrame(renderFrame);
+  });
+});
+</script>
+</body>
+</html>
